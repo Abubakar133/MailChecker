@@ -17,28 +17,32 @@ export class EmailVerificationService {
         }
 
         const mxHost = addresses[0].exchange;
-
         const client = new SMTPClient({
           host: mxHost,
-          port: 587, // Try using 587 (submission) instead of 25
-           // Set to true if you want to use SSL/TLS (port 465)
+          port: 25, // Try using 587 (submission) instead of 25
+          
         });
 
         try {
-          // Set up a timeout for the SMTP connection
-          await Promise.race([
-            this.performSmtpVerification(client, email),
-            new Promise((_, reject) => setTimeout(() => reject('SMTP connection timeout'), 5000)), // 5 seconds timeout
-          ]);
-          resolve('Email is valid!');
+          // Retry logic in case of failure
+          for (let attempt = 1; attempt <= 3; attempt++) {
+            try {
+              await this.performSmtpVerification(client, email);
+              resolve('Email is valid!');
+              return;
+            } catch (error) {
+              if (attempt === 3) throw error; // If it's the last attempt, throw the error
+              console.warn(`Attempt ${attempt} failed. Retrying...`);
+            }
+          }
         } catch (error) {
           console.error('SMTP Error:', error);
-          if (error === 'SMTP connection timeout') {
-            resolve('SMTP connection timed out.');
-          } else if (error.code === 'ECONNREFUSED') {
+          if (error.code === 'ECONNREFUSED') {
             resolve('SMTP server refused the connection.');
           } else if (error.message.includes('550')) {
             resolve('Email does not exist.');
+          } else if (error === 'SMTP connection timeout') {
+            resolve('SMTP connection timed out.');
           } else {
             resolve('Email is invalid!');
           }
@@ -48,19 +52,11 @@ export class EmailVerificationService {
     });
   }
 
-  // Separate function to handle SMTP verification
   private async performSmtpVerification(client: SMTPClient, email: string): Promise<void> {
     await client.connect();
     await client.greet({ hostname: 'yourdomain.com' });
     await client.mail({ from: 'you@yourdomain.com' });
     await client.rcpt({ to: email });
     await client.quit();
-  }
-}
-
-@Injectable()
-export class EmailVerificationService2 {
-  async verifyEmail(email: string): Promise<string> {
-  return 'Server is running successfully not!';
   }
 }
