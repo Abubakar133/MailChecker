@@ -8,14 +8,7 @@ export class EmailVerificationService {
     const domain = email.split('@')[1];
 
     return new Promise((resolve, reject) => {
-      // Set a timeout for DNS lookup
-      const dnsTimeout = setTimeout(() => {
-        reject('DNS lookup timeout.');
-      }, 5000); // 5 seconds timeout
-
       dns.resolveMx(domain, async (err, addresses) => {
-        clearTimeout(dnsTimeout);
-
         if (err) {
           return reject('Error during DNS lookup: ' + err.message);
         }
@@ -28,30 +21,39 @@ export class EmailVerificationService {
         const client = new SMTPClient({
           host: mxHost,
           port: 25,
-           // SMTP connection timeout set to 5 seconds
         });
 
         try {
-          await client.connect();
-          await client.greet({ hostname: 'yourdomain.com' });
-          await client.mail({ from: 'you@yourdomain.com' });
-          await client.rcpt({ to: email });
-
-          await client.quit();
+          // Set up a timeout for the SMTP connection
+          await Promise.race([
+            this.performSmtpVerification(client, email),
+            new Promise((_, reject) => setTimeout(() => reject('SMTP connection timeout'), 5000)), // 5 seconds timeout
+          ]);
           resolve('Email is valid!');
         } catch (error) {
-          console.error('SMTP Error:', error); // Log the error details
-          if (error.code === 'ECONNREFUSED') {
+          console.error('SMTP Error:', error);
+          if (error === 'SMTP connection timeout') {
+            resolve('SMTP connection timed out.');
+          } else if (error.code === 'ECONNREFUSED') {
             resolve('SMTP server refused the connection.');
           } else if (error.message.includes('550')) {
             resolve('Email does not exist.');
           } else {
             resolve('Email is invalid!');
           }
-          await client.quit();
+          await client.quit(); // Ensure the connection is closed
         }
       });
     });
+  }
+
+  // Separate function to handle SMTP verification
+  private async performSmtpVerification(client: SMTPClient, email: string): Promise<void> {
+    await client.connect();
+    await client.greet({ hostname: 'yourdomain.com' });
+    await client.mail({ from: 'you@yourdomain.com' });
+    await client.rcpt({ to: email });
+    await client.quit();
   }
 }
 
