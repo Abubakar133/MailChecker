@@ -7,6 +7,7 @@ export class EmailVerificationController {
 
   @Get('verify')
   async verifyEmail(@Query('email') email: string): Promise<string> {
+    
     return this.emailVerificationService.verifyEmail(email);
   }
 }

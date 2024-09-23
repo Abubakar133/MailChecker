@@ -9,6 +9,10 @@ export class AppController {
     return 'Server is running successfully!';
   }
   @Get()
+  getDefaultRoute2() {
+    return 'Server is running successfully!';
+  }
+  @Get()
   getHello(){
     return this.appService.getHello();
   }
