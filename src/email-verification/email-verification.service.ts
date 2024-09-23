@@ -20,7 +20,8 @@ export class EmailVerificationService {
 
         const client = new SMTPClient({
           host: mxHost,
-          port: 25,
+          port: 587, // Try using 587 (submission) instead of 25
+           // Set to true if you want to use SSL/TLS (port 465)
         });
 
         try {
