@@ -48,3 +48,10 @@ export class EmailVerificationService {
     });
   }
 }
+
+
+export class EmailVerificationService2 {
+  async verifyEmail(email: string): Promise<string> {
+  return 'Server is running successfully!';
+  }
+}
