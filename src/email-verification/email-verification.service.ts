@@ -31,7 +31,7 @@ export class EmailVerificationService {
         await Promise.race([
           this.performSmtpVerification(client, email),
           new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('SMTP connection timeout')), 5000),
+            setTimeout(() => reject(new Error('SMTP connection timeout')), 10000),
           ), // 5 seconds timeout
         ]);
 
